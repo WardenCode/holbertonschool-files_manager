@@ -4,7 +4,7 @@ import dbClient from '../utils/db';
 const ERROR_MSG = {
   email: 'Missing email',
   password: 'Missing password',
-  alreadyExists: 'Already exists',
+  alreadyExists: 'Already exist',
 };
 
 class UsersController {
