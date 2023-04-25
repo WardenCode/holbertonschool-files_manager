@@ -33,8 +33,8 @@ class UsersController {
     });
 
     return res.status(201).send({
-      email,
       id: insertedId,
+      email,
     });
   }
 }
