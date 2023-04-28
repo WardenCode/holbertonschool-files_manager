@@ -153,7 +153,9 @@ class FilesController {
     if (parentId !== 0) {
       if (!parentId) return res.status(401).send(unauthorizedError);
 
-      const folder = await dbClient.files.findOne({ _id: ObjectId(parentId) });
+      parentId = ObjectId(parentId);
+
+      const folder = await dbClient.files.findOne({ _id: parentId });
 
       if (!folder || folder.type !== 'folder') return res.status(200).send([]);
     }
@@ -162,7 +164,9 @@ class FilesController {
 
     const agg = { $and: [{ parentId }] };
     let aggData = [{ $match: agg }, { $skip: page * 20 }, { $limit: 20 }];
-    if (parentId === 0) aggData = [{ $skip: page * 20 }, { $limit: 20 }];
+    if (parentId === 0) {
+      aggData = [{ $skip: page * 20 }, { $limit: 20 }];
+    }
 
     const pageFiles = await dbClient.files.aggregate(aggData);
     const files = [];
