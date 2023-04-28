@@ -1,10 +1,16 @@
 import sha1 from 'sha1';
+import { ObjectId } from 'mongodb';
 import dbClient from '../utils/db';
+import redisClient from '../utils/redis';
 
 const ERROR_MSG = {
   email: 'Missing email',
   password: 'Missing password',
   alreadyExists: 'Already exist',
+};
+
+const unauthorizedError = {
+  error: 'Unauthorized',
 };
 
 class UsersController {
@@ -36,6 +42,21 @@ class UsersController {
       id: insertedId,
       email,
     });
+  }
+
+  static async getMe(req, res) {
+    const token = req.headers['x-token'];
+    const userId = await redisClient.get(`auth_${token}`);
+    const user = await dbClient.users.findOne({ _id: ObjectId(userId) });
+
+    if (!token || !userId || !user) {
+      return res.status(401).send(unauthorizedError);
+    }
+
+    const { _id, email } = user;
+    const userInfo = { id: _id, email };
+
+    return res.status(200).send(userInfo);
   }
 }
 
