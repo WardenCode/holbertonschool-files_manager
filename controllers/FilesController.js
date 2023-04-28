@@ -97,6 +97,90 @@ class FilesController {
       ...fileInsertData,
     });
   }
+
+  static async getShow(req, res) {
+    const token = req.headers['x-token'];
+    const userId = await redisClient.get(`auth_${token}`);
+
+    if (!userId) {
+      return res.status(401).send(unauthorizedError);
+    }
+
+    const user = await dbClient.users.findOne({ _id: ObjectId(userId) });
+
+    if (!user) {
+      return res.status(401).send(unauthorizedError);
+    }
+
+    const fileId = req.params.id || '';
+    const file = await dbClient.files.findOne({ _id: ObjectId(fileId), userId: user._id });
+    if (!file) return res.status(404).send({ error: 'Not found' });
+
+    const {
+      name,
+      type,
+      isPublic,
+      parentId,
+    } = file;
+
+    return res.status(200).send({
+      id: file._id,
+      userId,
+      name,
+      type,
+      isPublic,
+      parentId,
+    });
+  }
+
+  static async getIndex(req, res) {
+    const token = req.headers['x-token'];
+    const userId = await redisClient.get(`auth_${token}`);
+
+    if (!userId) {
+      return res.status(401).send(unauthorizedError);
+    }
+
+    const user = await dbClient.users.findOne({ _id: ObjectId(userId) });
+
+    if (!user) {
+      return res.status(401).send(unauthorizedError);
+    }
+
+    let parentId = req.query.parentId || 0;
+
+    if (parentId === '0') parentId = 0;
+    if (parentId !== 0) {
+      if (!parentId) return res.status(401).send(unauthorizedError);
+
+      const folder = await dbClient.files.findOne({ _id: ObjectId(parentId) });
+
+      if (!folder || folder.type !== 'folder') return res.status(200).send([]);
+    }
+
+    const page = req.query.page || 0;
+
+    const agg = { $and: [{ parentId }] };
+    let aggData = [{ $match: agg }, { $skip: page * 20 }, { $limit: 20 }];
+    if (parentId === 0) aggData = [{ $skip: page * 20 }, { $limit: 20 }];
+
+    const pageFiles = await dbClient.files.aggregate(aggData);
+    const files = [];
+
+    await pageFiles.forEach((file) => {
+      const fileObj = {
+        id: file._id,
+        userId: file.userId,
+        name: file.name,
+        type: file.type,
+        isPublic: file.isPublic,
+        parentId: file.parentId,
+      };
+      files.push(fileObj);
+    });
+
+    return res.status(200).send(files);
+  }
 }
 
 export default FilesController;
