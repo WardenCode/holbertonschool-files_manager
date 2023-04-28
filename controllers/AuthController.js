@@ -15,9 +15,14 @@ class AuthController {
       return res.status(401).send(unauthorizedError);
     }
 
-    const userDataBase64 = authorization.split(' ')[1];
-    const userDataBuffer = Buffer.from(userDataBase64, 'base64');
-    const [email, password] = userDataBuffer.toString().split(':');
+    const userDataEncoded = authorization.split(' ')[1];
+    const userDataDecoded = Buffer.from(userDataEncoded, 'base64');
+    const [email, password] = userDataDecoded.toString().split(':');
+
+    if (!email || !password) {
+      return res.status(401).send(unauthorizedError);
+    }
+
     const userObj = {
       email,
       password: sha1(password),
