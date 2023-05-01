@@ -1,3 +1,4 @@
+import Queue from 'bull';
 import { writeFile, mkdir, readFileSync } from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 import { ObjectId } from 'mongodb';
@@ -19,6 +20,7 @@ const FILE_ERROR_MSG = {
 
 class FilesController {
   static async postUpload(req, res) {
+    const fileQ = new Queue('fileQ');
     const token = req.headers['x-token'];
     const userId = await redisClient.get(`auth_${token}`);
     const dir = process.env.FOLDER_PATH || '/tmp/files_manager';
@@ -92,6 +94,11 @@ class FilesController {
 
     fileInsertData.localPath = filePath;
     await dbClient.files.insertOne(fileInsertData);
+
+    fileQ.add({
+      userId: fileInsertData.userId,
+      fileId: fileInsertData._id,
+    });
 
     return res.status(201).send({
       id: fileInsertData._id,
